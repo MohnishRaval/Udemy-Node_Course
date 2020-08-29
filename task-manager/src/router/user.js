@@ -41,7 +41,7 @@ router.get("/users/:id", async (req, res) => {
 //USER UPDATE
 router.patch("/users/:id", async (req, res) => {
   const updates = Object.keys(req.body);
-  const allow_updates = ["name", "email", "age"];
+  const allow_updates = ["name", "email", "password", "age"];
   const valid_op = updates.every((update) => {
     return allow_updates.includes(update);
   });
@@ -53,10 +53,14 @@ router.patch("/users/:id", async (req, res) => {
 
   try {
     //console.log(updates);
-    const user = await User.findByIdAndUpdate(req.params.id, req.body, {
-      new: true,
-      runValidators: true,
-    });
+    const user = await User.findByIdAndUpdate(req.params.id);
+    updates.forEach((update) => (user[update] = req.body[update]));
+    await user.save();
+
+    // const user = await User.findByIdAndUpdate(req.params.id, req.body, {
+    //   new: true,
+    //   runValidators: true,
+    // });
     if (!user) {
       return res.status(404).send();
     }
@@ -78,6 +82,19 @@ router.delete("/users/:id", async (req, res) => {
     res.status(200).send(user_del);
   } catch (error) {
     res.status(400).send({ error: "Cannot delete user" });
+  }
+});
+
+//USER LOGIN
+router.post("/users/login", async (req, res) => {
+  try {
+    const user = await User.findByCredentials(
+      req.body.email,
+      req.body.password
+    );
+    res.send(user);
+  } catch (error) {
+    res.status(400).send();
   }
 });
 
