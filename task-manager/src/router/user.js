@@ -1,6 +1,7 @@
 const express = require("express");
 const router = new express.Router();
 const User = require("../models/user");
+const auth = require("../middleware/auth");
 
 //ADDING USER
 router.post("/users", async (req, res) => {
@@ -8,38 +9,58 @@ router.post("/users", async (req, res) => {
 
   try {
     await user.save();
-    res.status(201).send(user);
+    const token = await user.generateAuthToken();
+    res.status(201).send({ user, token });
   } catch (e) {
     res.status(400).send(e);
   }
 });
 
-//READING ALL THE USERS
-router.get("/users", async (req, res) => {
+//LOGOUT USER
+router.post("/users/logout", auth, async (req, res) => {
   try {
-    const users = await User.find({});
-    res.status(201).send(users);
+    req.user.tokens = req.user.tokens.filter((token) => {
+      return token.token != req.token;
+    });
+    await req.user.save();
+    res.send();
   } catch (e) {
-    res.status(500).send(e);
+    res.status(500).send();
   }
+});
+
+//LOGOUT ALL
+router.post("/users/logoutAll", auth, async (req, res) => {
+  try {
+    req.user.tokens = [];
+    await req.user.save();
+    res.status(200).send();
+  } catch (error) {
+    res.status(500).send();
+  }
+});
+
+//READING ALL THE USERS
+router.get("/users/me", auth, async (req, res) => {
+  res.send(req.user);
 });
 
 //FIND USER BY ID
-router.get("/users/:id", async (req, res) => {
-  const _id = req.params.id;
-  try {
-    const user = await User.findById(_id);
-    if (!user) {
-      return res.status(404).send();
-    }
-    res.status(201).send(user);
-  } catch (error) {
-    res.status(500).send(error);
-  }
-});
+// router.get("/users/:id", async (req, res) => {
+//   const _id = req.params.id;
+//   try {
+//     const user = await User.findById(_id);
+//     if (!user) {
+//       return res.status(404).send();
+//     }
+//     res.status(201).send(user);
+//   } catch (error) {
+//     res.status(500).send(error);
+//   }
+// });
 
 //USER UPDATE
-router.patch("/users/:id", async (req, res) => {
+router.patch("/users/me", auth, async (req, res) => {
   const updates = Object.keys(req.body);
   const allow_updates = ["name", "email", "password", "age"];
   const valid_op = updates.every((update) => {
@@ -52,36 +73,26 @@ router.patch("/users/:id", async (req, res) => {
   }
 
   try {
-    //console.log(updates);
-    const user = await User.findByIdAndUpdate(req.params.id);
-    updates.forEach((update) => (user[update] = req.body[update]));
-    await user.save();
-
-    // const user = await User.findByIdAndUpdate(req.params.id, req.body, {
-    //   new: true,
-    //   runValidators: true,
-    // });
-    if (!user) {
-      return res.status(404).send();
-    }
-    res.status(201).send(user);
+    updates.forEach((update) => (req.user[update] = req.body[update]));
+    await req.user.save();
+    res.status(201).send(req.user);
   } catch (error) {
     res.status(400).send(error);
   }
 });
 
 //DELETE USER
-router.delete("/users/:id", async (req, res) => {
-  const id = req.params.id;
-
+router.delete("/users/me", auth, async (req, res) => {
+  //const id = req.params.id;
   try {
-    const user_del = await User.findByIdAndDelete(req.params.id);
-    if (!user_del) {
-      res.status(400).send();
-    }
-    res.status(200).send(user_del);
+    // const user_del = await User.findByIdAndDelete(req.user._id);
+    // if (!user_del) {
+    //   res.status(400).send();
+    // }
+    await req.user.remove();
+    res.status(200).send(req.user);
   } catch (error) {
-    res.status(400).send({ error: "Cannot delete user" });
+    res.status(500).send({ error: "Cannot delete user" });
   }
 });
 
@@ -92,7 +103,8 @@ router.post("/users/login", async (req, res) => {
       req.body.email,
       req.body.password
     );
-    res.send(user);
+    const token = await user.generateAuthToken();
+    res.send({ user, token });
   } catch (error) {
     res.status(400).send();
   }
