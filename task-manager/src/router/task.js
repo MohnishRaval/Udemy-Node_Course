@@ -22,8 +22,29 @@ router.post("/tasks", auth, async (req, res) => {
 //READ ALL TASKS
 router.get("/tasks", auth, async (req, res) => {
   try {
-    const all_tasks = await Task.find({ owner: req.user._id });
-    res.status(201).send(all_tasks);
+    // const all_tasks = await Task.find({ owner: req.user._id });
+    const match = {};
+    const sort = {};
+    if (req.query.completed) {
+      match.completed = req.query.completed === "true";
+    }
+    if (req.query.sortBy) {
+      const parts = req.query.sortBy.split(":");
+      sort[parts[0]] = parts[1] === "desc" ? -1 : 1;
+    }
+
+    await req.user
+      .populate({
+        path: "tasks",
+        match,
+        options: {
+          limit: parseInt(req.query.limit),
+          skip: parseInt(req.query.skip),
+          sort,
+        },
+      })
+      .execPopulate();
+    res.status(201).send(req.user.tasks);
   } catch (error) {
     res.status(500).send(error);
   }
