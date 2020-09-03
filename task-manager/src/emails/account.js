@@ -2,14 +2,6 @@ const sgmail = require("@sendgrid/mail");
 
 sgmail.setApiKey(process.env.SENDGRID_API_KEY);
 
-// sgmail.send({
-//   to: "mohnishraval40@gmail.com",
-//   from: "mohnishraval40@gmail.com",
-//   subject: "First Email",
-//   text: "Hello From Task App",
-//   html: `<strong>GREETINGS FROM TASk APP</strong>`,
-// });
-
 const welcomemail = (email, name) => {
   sgmail.send({
     to: email,
