@@ -66,6 +66,7 @@ UserSchema.virtual("tasks", {
   foreignField: "owner",
 });
 
+//THIS FUNCTIONS REMOVES SENSITIVE INFO THAT IS HIDES IMP STUFF
 UserSchema.methods.toJSON = function () {
   const user = this;
   const userObject = user.toObject();
@@ -90,7 +91,7 @@ UserSchema.statics.findByCredentials = async (email, password) => {
 //TOKEN
 UserSchema.methods.generateAuthToken = async function () {
   const user = this;
-  const token = jwt.sign({ _id: user._id.toString() }, "hello");
+  const token = jwt.sign({ _id: user._id.toString() }, process.env.JWT_SECRET);
   user.tokens = user.tokens.concat({ token });
   await user.save();
   return token;

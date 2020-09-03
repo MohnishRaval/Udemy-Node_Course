@@ -4,6 +4,8 @@ const User = require("../models/user");
 const auth = require("../middleware/auth");
 const multer = require("multer");
 const sharp = require("sharp");
+const { welcomemail } = require("../emails/account");
+const { deleteusermail } = require("../emails/account");
 
 //ADDING USER
 router.post("/users", async (req, res) => {
@@ -11,6 +13,7 @@ router.post("/users", async (req, res) => {
 
   try {
     await user.save();
+    welcomemail(user.email, user.name);
     const token = await user.generateAuthToken();
     res.status(201).send({ user, token });
   } catch (e) {
@@ -91,7 +94,9 @@ router.delete("/users/me", auth, async (req, res) => {
     // if (!user_del) {
     //   res.status(400).send();
     // }
+    //const delete_user = req.body;
     await req.user.remove();
+    deleteusermail(req.user.email, req.user.name);
     res.status(200).send(req.user);
   } catch (error) {
     res.status(500).send({ error: "Cannot delete user" });
